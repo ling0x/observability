@@ -28,7 +28,7 @@ Your App
                    Grafana  ◄── Nginx (:8081)
 ```
 
-Nginx is the only publicly exposed entry point. It routes traffic to Grafana and Prometheus, and forwards OTLP traffic to the collector. Basic-auth is enforced via `.htpasswd`.
+Nginx is the only publicly exposed entry point. It serves Grafana at `/grafana/` and Prometheus at `/prometheus/`, and accepts OTLP traffic on a separate port (no basic-auth) restricted to RFC1918 addresses. Basic-auth is enforced on all UI routes via `nginx/.htpasswd`.
 
 ## Getting Started
 
@@ -42,9 +42,10 @@ Nginx is the only publicly exposed entry point. It routes traffic to Grafana and
 
 2. Create a `.env` file (see the environment variables section below).
 
-3. Generate an `.htpasswd` file for Nginx basic auth:
+3. Set up Nginx basic auth by copying the example and replacing it with a real hashed password:
    ```bash
-   htpasswd -c nginx/.htpasswd <username>
+   cp nginx/.htpasswd.example nginx/.htpasswd
+   htpasswd nginx/.htpasswd <username>
    ```
 
 4. Start the stack:
@@ -52,7 +53,7 @@ Nginx is the only publicly exposed entry point. It routes traffic to Grafana and
    docker compose up -d
    ```
 
-5. Open Grafana at `http://localhost:8081`.
+5. Open Grafana at `http://localhost:8081/grafana/` (redirected automatically from `/`).
 
 ## Environment Variables
 
@@ -82,14 +83,18 @@ Point your application's OTLP exporter at the public collector endpoint:
 http://<host>:14318
 ```
 
-The collector accepts **OTLP over HTTP** and automatically routes metrics, logs, and traces to the appropriate backend.
+The OTLP port bypasses basic-auth but is restricted to private/loopback IP ranges (`127.0.0.1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`). Restrict this further to specific IPs in production.
 
 ## Configuration Files
 
-All service configs live in `configs/`:
+All service configs live in `configs/` and Nginx configs in `nginx/`:
 
-- `otel-collector-config.yml` — receiver, processor, and exporter pipeline
-- `prometheus.yml` — scrape targets
-- `loki-config.yml` — Loki storage and ingestion settings
-- `tempo.yml` — Tempo storage backend config
-- `grafana/provisioning/datasources/datasources.yaml` — auto-provisions Prometheus, Loki, and Tempo as Grafana data sources
+| File | Purpose |
+|---|---|
+| `configs/otel-collector-config.yml` | Receiver, processor, and exporter pipeline |
+| `configs/prometheus.yml` | Scrape targets |
+| `configs/loki-config.yml` | Loki storage and ingestion settings |
+| `configs/tempo.yml` | Tempo storage backend config |
+| `configs/grafana/provisioning/datasources/datasources.yaml` | Auto-provisions Prometheus, Loki, and Tempo in Grafana |
+| `nginx/nginx.conf` | Reverse proxy routing and OTLP IP allowlist |
+| `nginx/.htpasswd.example` | Example htpasswd file — copy to `nginx/.htpasswd` and populate |
