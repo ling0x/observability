@@ -1,0 +1,29 @@
+apiVersion: 1
+
+# Grafana runs inside Docker: use service names, not localhost (Tempo is not published on the host).
+datasources:
+    - name: Prometheus
+      type: prometheus
+      uid: prom
+      access: proxy
+      url: http://prometheus:9090
+      isDefault: true
+      editable: true
+      jsonData:
+          timeInterval: 15s
+
+    - name: Loki
+      type: loki
+      uid: loki
+      access: proxy
+      url: http://loki:3100
+      editable: true
+
+    - name: Tempo
+      type: tempo
+      uid: tempo
+      access: proxy
+      url: http://tempo:3200
+      editable: true
+      jsonData:
+          httpMethod: GET
